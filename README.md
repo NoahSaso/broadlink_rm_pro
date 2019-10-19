@@ -14,11 +14,16 @@ Use `$learn <keyword>` to learn a new command. Use `$display` to display existin
 >> paxse
 Keyword 'paxse' not found in config file.
 >> pause
+>> $display
+power, r, enter, play, pause
 >> $learn new_keyword
 Waiting for frequency...
 Frequency saved to keyword 'new_keyword'.
 >> $learn new_keyword
 Keyword 'new_keyword' already taken. Would you like to overwrite? [y/n]: n
+>> $display
+power, r, enter, play, pause, new_keyword
+>> new_keyword
 >> ^D
 Exiting control mode.
 ```
