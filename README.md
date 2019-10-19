@@ -12,7 +12,7 @@ pip3 install broadlink
 ## Usage
 
 ```
-usage: tv.py [-h] [-l KEYWORD] [-f] [-s KEYWORD] [-c CONFIG_FILE] [-d]
+usage: control_rm.py [-h] [-l KEYWORD] [-f] [-s KEYWORD] [-c CONFIG_FILE] [-d]
 
 optional arguments:
   -h, --help            show this help message and exit
