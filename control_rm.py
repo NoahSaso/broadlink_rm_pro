@@ -9,7 +9,6 @@ import os
 
 parser = argparse.ArgumentParser(description='CLI to learn/send IR/RF frequencies from a Broadlink RM Pro device. Run with no arguments (except -c/--config and -p/--prefix) to enter the interactive control mode.')
 parser.add_argument('-l', '--learn', help='learn new frequency', metavar='KEYWORD')
-parser.add_argument('-f', '--force', help='force overwrite learning frequency keyword', action='store_true')
 parser.add_argument('-s', '--send', help='send frequency', metavar='KEYWORD')
 parser.add_argument('-c', '--config', help='specify config file', default='tv_remote.json', metavar='CONFIG_FILE')
 parser.add_argument('-d', '--display', help='display available keywords', action='store_true')
@@ -26,20 +25,63 @@ with open(args.config, 'r') as f:
   except:
     pass # if fails, just continue because file might be empty
 
-device = broadlink.discover(local_ip_address='0.0.0.0')
-if not device:
-  print('Could not find device')
-  exit(1)
+if not args.display:
+  print('Connecting to device...')
+  device = broadlink.discover(local_ip_address='0.0.0.0')
+  if not device:
+    print('Could not find device')
+    exit(1)
 
-device.auth()
+  device.auth()
+  print('Connected.')
+
+done = False
 
 learned_frequency = False
 def learn():
   global learned_frequency
+
   device.enter_learning()
   print('Waiting for frequency...')
-  while not learned_frequency:
+  while not learned_frequency and not done:
     learned_frequency = device.check_data()
+
+def start_learn(keyword):
+  global data
+  global learned_frequency
+  global done
+
+  if keyword in data:
+    force = input("Keyword '{0}' already taken. Would you like to overwrite? [y/n]: ".format(keyword))
+    if force.lower() != 'y':
+      return
+
+  thread = threading.Thread(target=learn)
+  thread.start()
+
+  try:
+    thread.join()
+  except KeyboardInterrupt: pass
+
+  if not learned_frequency:
+    print('\nCancelled.')
+    done = True
+    return
+
+  try:
+    encoded = base64.encodebytes(learned_frequency).decode('ascii')
+    learned_frequency = False
+  except:
+    print("Could not encode data for keyword '{0}'.".format(keyword))
+    done = True
+    return
+
+  data[keyword] = encoded
+
+  with open(args.config, 'w') as f:
+    json.dump(data, f)
+
+  print("Frequency saved to keyword '{0}'.".format(keyword))
 
 def send(keyword):
   if not keyword in data:
@@ -54,43 +96,45 @@ def send(keyword):
 
   device.send_data(decoded)
 
+def display():
+  print(', '.join(data.keys()))
+
 def control_mode():
-    keyword = input('{0} '.format(args.prefix))
-    send(keyword)
-    control_mode()
+  global args
+  input_args = input('{0} '.format(args.prefix))
+
+  split_input_args = input_args.split(' ')
+  if len(split_input_args) and split_input_args[0].startswith('$'):
+    cmd = split_input_args[0][1:].lower()
+    if cmd == 'learn':
+      start_learn(split_input_args[1])
+    elif cmd == 'display':
+      display()
+    else:
+      send(input_args)
+  else:
+    send(input_args)
+
+  control_mode()
+
+# RUN
 
 if args.learn:
-  if args.learn in data and not args.force:
-    print("Not overwriting learned frequency with keyword '{0}', use -f (--force) to overwrite.".format(args.learn))
-    exit(1)
-
-  thread = threading.Thread(target=learn)
-  thread.start()
-  thread.join()
-
-  try:
-    encoded = base64.encodebytes(learned_frequency).decode('ascii')
-  except:
-    print("Could not encode data for keyword '{0}'.".format(args.learn))
-    exit(1)
-
-  data[args.learn] = encoded
-
-  with open(args.config, 'w') as f:
-    data = json.dump(data, f)
-
-  print("Frequency saved to keyword '{0}'.".format(args.learn))
+  start_learn(args.learn)
 
 elif args.send:
   send(args.send)
+  print('Sent.')
 
 elif args.display:
-  print(', '.join(data.keys()))
+  display()
 
 else:
   print('Interactive control mode. Press enter to send the entered keyword. Press Ctrl-D to exit.')
+  print('Use `$learn <keyword>` to learn a new command. Use `$display` to display existing commands.')
 
   try:
     control_mode()
-  except EOFError:
+  except (EOFError, KeyboardInterrupt):
+    done = True
     print('\nExiting control mode.')
