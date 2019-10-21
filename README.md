@@ -4,11 +4,14 @@ Python script utilizing Broadlink RM Pro device to learn/emit IR/RF frequencies 
 ## Interactive Control Mode
 Once the script has recorded various frequencies, you can use interactive control mode so that you can effectively use the command line as a remote.
 ```
-Interactive control mode. Press enter to send the entered keyword. Press Ctrl-D to exit.
+Interactive control mode. Press enter to send the entered keyword. Press enter with an empty input to repeat the previous input.
 Use `$learn <keyword>` to learn a new command. Use `$display` to display existing commands.
+Press Ctrl-D to exit.
 >> power
 >> r
 >> r
+>>
+Rerunning input 'r'
 >> enter
 >> play
 >> paxse
@@ -25,7 +28,7 @@ Keyword 'new_keyword' already taken. Would you like to overwrite? [y/n]: n
 power, r, enter, play, pause, new_keyword
 >> new_keyword
 >> ^D
-Exiting control mode.
+Exiting interactive control mode.
 ```
 
 ---

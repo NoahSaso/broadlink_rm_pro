@@ -99,9 +99,19 @@ def send(keyword):
 def display():
   print(', '.join(data.keys()))
 
+prev_input = False
+
 def control_mode():
   global args
+  global prev_input
+
   input_args = input('{0} '.format(args.prefix))
+
+  if not len(input_args) and prev_input:
+    input_args = prev_input
+    print("Rerunning input '{0}'".format(input_args))
+  else:
+    prev_input = input_args
 
   split_input_args = input_args.split(' ')
   if len(split_input_args) and split_input_args[0].startswith('$'):
@@ -130,11 +140,12 @@ elif args.display:
   display()
 
 else:
-  print('Interactive control mode. Press enter to send the entered keyword. Press Ctrl-D to exit.')
+  print('Interactive control mode. Press enter to send the entered keyword. Press enter with an empty input to repeat the previous input.')
   print('Use `$learn <keyword>` to learn a new command. Use `$display` to display existing commands.')
+  print('Press Ctrl-D to exit.')
 
   try:
     control_mode()
   except (EOFError, KeyboardInterrupt):
     done = True
-    print('\nExiting control mode.')
+    print('\nExiting interactive control mode.')
