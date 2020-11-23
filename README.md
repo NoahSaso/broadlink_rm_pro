@@ -31,6 +31,9 @@ power, r, enter, play, pause, new_keyword
 Exiting interactive control mode.
 ```
 
+### Auto Mode
+You can also enter auto interactive control mode (with `-a / --auto`), which only accepts single key commands, automatically running after each keypress. This is useful, for example, if you connect a game remote to your computer and assign each button to a single keypress.
+
 ---
 
 ## Setup
@@ -43,11 +46,11 @@ pip3 install broadlink
 
 ```
 usage: control_rm.py [-h] [-l KEYWORD] [-s KEYWORD] [-c CONFIG_FILE] [-d]
-                     [-p PREFIX]
+                     [-p PREFIX] [-a]
 
 CLI to learn/send IR/RF frequencies from a Broadlink RM Pro device. Run with
-no arguments (except -c/--config and -p/--prefix) to enter the interactive
-control mode.
+no arguments (except -c/--config, -p/--prefix, and -a/--auto) to enter the
+interactive control mode.
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -60,4 +63,6 @@ optional arguments:
   -d, --display         display available keywords
   -p PREFIX, --prefix PREFIX
                         prefix for interactive control mode input
+  -a, --auto            enter interactive auto mode which presses enter after
+                        each keypress
 ```

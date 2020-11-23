@@ -6,13 +6,16 @@ import argparse
 import threading
 import base64
 import os
+import sys
+import threading
 
-parser = argparse.ArgumentParser(description='CLI to learn/send IR/RF frequencies from a Broadlink RM Pro device. Run with no arguments (except -c/--config and -p/--prefix) to enter the interactive control mode.')
+parser = argparse.ArgumentParser(description='CLI to learn/send IR/RF frequencies from a Broadlink RM Pro device. Run with no arguments (except -c/--config, -p/--prefix, and -a/--auto) to enter the interactive control mode.')
 parser.add_argument('-l', '--learn', help='learn new frequency', metavar='KEYWORD')
 parser.add_argument('-s', '--send', help='send frequency', metavar='KEYWORD')
 parser.add_argument('-c', '--config', help='specify config file', default='tv_remote.json', metavar='CONFIG_FILE')
 parser.add_argument('-d', '--display', help='display available keywords', action='store_true')
 parser.add_argument('-p', '--prefix', help='prefix for interactive control mode input', default='>>')
+parser.add_argument('-a', '--auto', help='enter interactive auto mode which presses enter after each keypress', action='store_true')
 args = parser.parse_args()
 
 if not os.path.exists(args.config):
@@ -94,18 +97,49 @@ def send(keyword):
     print("Could not decode data for keyword '{0}'.".format(keyword))
     return
 
-  device.send_data(decoded)
+  # Send data in another thread so we don't block the console interface
+  t = threading.Thread(target=device.send_data, args=(decoded,))
+  t.start()
+  # device.send_data(decoded)
 
 def display():
   print(', '.join(data.keys()))
 
 prev_input = False
 
+# https://stackoverflow.com/a/28143542
+def getch():
+  import termios
+  import tty
+  def _getch():
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+    try:
+      tty.setraw(fd)
+      ch = sys.stdin.read(1)
+    finally:
+      termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+    return ch
+  return _getch()
+
 def control_mode():
   global args
   global prev_input
 
-  input_args = input('{0} '.format(args.prefix))
+  if args.auto:
+    input_args = getch()
+    # ESC
+    if ord(input_args) == 27:
+      raise KeyboardInterrupt
+    # Return, rerun last input, empty
+    elif ord(input_args) == 13:
+      input_args = ""
+    else:
+      sys.stdout.write(input_args)
+      sys.stdout.flush()
+      print()
+  else:
+    input_args = input('{0} '.format(args.prefix))
 
   if not len(input_args) and prev_input:
     input_args = prev_input
@@ -114,7 +148,7 @@ def control_mode():
     prev_input = input_args
 
   split_input_args = input_args.split(' ')
-  if len(split_input_args) and split_input_args[0].startswith('$'):
+  if not args.auto and len(split_input_args) and split_input_args[0].startswith('$'):
     cmd = split_input_args[0][1:].lower()
     if cmd == 'learn':
       start_learn(split_input_args[1])
@@ -140,9 +174,13 @@ elif args.display:
   display()
 
 else:
-  print('Interactive control mode. Press enter to send the entered keyword. Press enter with an empty input to repeat the previous input.')
-  print('Use `$learn <keyword>` to learn a new command. Use `$display` to display existing commands.')
-  print('Press Ctrl-D to exit.')
+  if args.auto:
+    print('Auto interactive control mode. The first letter typed will be sent. Pressing enter will repeat the previous input.')
+    print('Press ESC to exit.')
+  else:
+    print('Interactive control mode. Press enter to send the entered keyword. Press enter with an empty input to repeat the previous input.')
+    print('Use `$learn <keyword>` to learn a new command. Use `$display` to display existing commands.')
+    print('Press Ctrl-D to exit.')
 
   try:
     control_mode()
